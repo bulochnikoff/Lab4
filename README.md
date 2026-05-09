@@ -1,73 +1,91 @@
-# React + TypeScript + Vite
+# Лабораторная работа №4: Фронтенд для IoT датчиков
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Цель работы
 
-Currently, two official plugins are available:
+Разработать интерактивный веб-интерфейс для визуализации данных с датчиков, интеграции с REST API и запуска в Docker.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Технологии
 
-## React Compiler
+- React 18 + TypeScript
+- Vite (сборка)
+- Recharts (графики)
+- Axios (HTTP-запросы)
+- Nginx (сервер статики)
+- Docker, Docker Compose
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Функциональность
 
-## Expanding the ESLint configuration
+- **График временных рядов** – отображение показаний датчиков (линейный график)
+- **Форма добавления показаний** – отправка новых данных на бэкенд (POST /api/v1/sensors/readings)
+- **ML-прогноз** – отправка признаков и получение предсказания (сумма признаков) через POST /api/v1/models/predict
+- **Проксирование API** – все запросы `/api/*` перенаправляются на бэкенд (избегает CORS)
+- **Docker-упаковка** – многоступенчатая сборка (node:20 → nginx:alpine)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Структура проекта
+<img width="264" height="469" alt="image" src="https://github.com/user-attachments/assets/97c40c64-5ed8-49ec-ada3-185c40a58151" />
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Запуск с помощью Docker Compose
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+1. Убедитесь, что порты `8080`, `5001`, `5434` свободны.
+2. В терминале перейдите в папку `Lab4` и выполните:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+docker compose up --build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+После успешной сборки откройте в браузере:
+
+Фронтенд: http://localhost:8080
+
+Swagger документация бэкенда: http://localhost:5001/api/docs
+
+Использование
+1. Просмотр графика
+При загрузке страницы отображается график всех сохранённых показаний. Если данных нет – появится сообщение «Нет данных для отображения».
+
+2. Добавление показания
+Заполните форму:
+
+sensor_id – не менее 36 символов
+
+value – число
+
+timestamp – дата/время в формате ISO (например, 2026-05-09T12:00:00Z)
+
+lat, lon – координаты (числа)
+Нажмите «Отправить». После успешной отправки страница перезагружается и график обновляется.
+
+3. ML-прогноз
+Введите числа через запятую (например, 1,2,3,4) и нажмите «Предсказать». Будет показан результат – сумма признаков.
+
+API эндпоинты (бэкенд)
+Бэкенд запускается на порту 5001 и предоставляет:
+
+Метод	                       URL	                                 Описание
+GET	                       /health	                            Проверка статуса
+GET	                       /api/v1/sensors/readings	         Получить все показания
+POST	                     /api/v1/sensors/readings	            Добавить показание
+POST	                     /api/v1/models/predict	         ML-прогноз (признаки → сумма)
+GET	                       /api/docs	                              Swagger UI
+
+Проверка работоспособности
+Здоровье бэкенда: http://localhost:5001/health → {"status":"ok"}
+
+Прямой вызов API: http://localhost:5001/api/v1/sensors/readings → массив
+
+Фронтенд через прокси: открыть http://localhost:8080, в инструментах разработчика (Network) должен быть запрос к /api/v1/sensors/readings с ответом 200.
+
+Сборка без Docker (для разработки)
+bash
+cd frontend
+npm install
+npm run dev
+Фронтенд будет доступен на http://localhost:5173 (прокси настроен на бэкенд localhost:5001).
+
+Примечания
+-Бэкенд взят из лабораторной работы №3 (он включён в docker-compose.yml как отдельный сервис).
+
+-База данных PostgreSQL поднимается автоматически.
+
+-При первом запуске может потребоваться время на скачивание образов.
